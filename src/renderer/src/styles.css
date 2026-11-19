@@ -11,6 +11,7 @@ h2 { font-size: var(--fs-lg); line-height: var(--lh-lg); margin: 0 0 var(--sp-3)
 button, input, select, textarea { font: inherit; color: inherit; }
 :focus-visible { outline: 2px solid var(--c-accent); outline-offset: 1px; }
 .muted { color: var(--c-text-muted); }
+.sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
 .empty-hint { color: var(--c-text-muted); text-align: center; padding: var(--sp-5) var(--sp-3); }
 .error-text { color: var(--c-danger); }
 code { font-family: var(--font-mono); word-break: break-all; }

@@ -81,7 +81,7 @@ export function Player() {
           if (!a || a.offline) continue
           if (a.kind === 'image') {
             let img = images.get(a.id)
-            if (!img) images.set(a.id, (img = Object.assign(new Image(), { src: mediaUrl(a.path) })))
+            if (!img) images.set(a.id, (img = Object.assign(new Image(), { crossOrigin: 'anonymous', src: mediaUrl(a.path) })))
             if (img.complete && img.naturalWidth && !track.hidden) draw(img, img.naturalWidth, img.naturalHeight, c.transform, fade)
             continue
           }
@@ -89,6 +89,7 @@ export function Player() {
           if (!v) {
             v = document.createElement('video')
             v.preload = 'auto'
+            v.crossOrigin = 'anonymous'
             v.src = mediaUrl(a.path)
             videos.set(c.id, v)
           }

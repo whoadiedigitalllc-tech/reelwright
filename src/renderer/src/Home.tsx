@@ -79,7 +79,7 @@ export function Home() {
       <ul className="project-grid">
         {list?.map((p) => (
           <li key={p.id} className="project-card">
-            <button className="project-open" onClick={() => openId(p.id)} aria-label={`Open ${p.name}`}>
+            <button className="project-open" onClick={() => openId(p.id)} aria-label={`Open ${p.name}, ${timecode(p.duration, 30).slice(0, 5)}`}>
               <div className="project-thumb">
                 {p.thumb ? <img src={mediaUrl(p.thumb)} alt="" /> : <Film size={28} aria-hidden />}
                 <span className="badge">{timecode(p.duration, 30).slice(0, 5)}</span>

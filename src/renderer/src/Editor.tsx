@@ -84,7 +84,7 @@ export function Editor() {
     { id: 'fades', label: 'Fades', Icon: Sparkles }
   ] as const
   return (
-    <div className="editor">
+    <main className="editor">
       <TopBar onExport={() => setExporting(true)} />
       <nav className="tabrail" role="tablist" aria-orientation="vertical">
         {tabs.map(({ id, label, Icon }) => (
@@ -103,7 +103,7 @@ export function Editor() {
       <Inspector />
       <Timeline />
       {exporting && <ExportDialog onClose={() => setExporting(false)} />}
-    </div>
+    </main>
   )
 }
 
@@ -120,6 +120,7 @@ function TopBar({ onExport }: { onExport: () => void }) {
       <Button variant="ghost" onClick={back} aria-label="Back to projects">
         <ArrowLeft size={16} aria-hidden /> Projects
       </Button>
+      <h1 className="sr-only">Editing {project.name}</h1>
       <input
         className="title-input"
         aria-label="Project name"

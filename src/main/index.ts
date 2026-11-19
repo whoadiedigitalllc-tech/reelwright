@@ -18,6 +18,8 @@ const unpacked = (p: string) => p.replace('app.asar', 'app.asar.unpacked')
 const FFMPEG = unpacked(ffmpegStatic as unknown as string)
 const FFPROBE = unpacked(ffprobeStatic.path)
 
+if (process.env.VE_USER_DATA) app.setPath('userData', process.env.VE_USER_DATA) // e2e tests use a throwaway folder
+
 const ID = /^[0-9a-f-]{36}$/
 const root = () => join(app.getPath('userData'), 'projects')
 const dir = (id: string) => {
@@ -36,7 +38,7 @@ const IMAGE = /\.(png|jpe?g|webp|gif|bmp)$/i
 // ---------- media:// protocol: streams local media to the renderer with range support (needed for seeking) ----------
 
 protocol.registerSchemesAsPrivileged([
-  { scheme: 'media', privileges: { standard: true, secure: true, stream: true, supportFetchAPI: true } }
+  { scheme: 'media', privileges: { standard: true, secure: true, stream: true, supportFetchAPI: true, corsEnabled: true } }
 ])
 
 async function serveMedia(req: Request): Promise<Response> {
@@ -54,7 +56,10 @@ async function serveMedia(req: Request): Promise<Response> {
   const end = m?.[2] ? Math.min(Number(m[2]), size - 1) : size - 1
   if (start >= size) return new Response(null, { status: 416, headers: { 'content-range': `bytes */${size}` } })
   const body = Readable.toWeb(createReadStream(path, { start, end })) as unknown as ReadableStream
-  const headers: Record<string, string> = { 'content-type': type, 'content-length': String(end - start + 1), 'accept-ranges': 'bytes' }
+  // CORS so the preview canvas stays readable (not tainted) when it draws these frames.
+  const headers: Record<string, string> = {
+    'content-type': type, 'content-length': String(end - start + 1), 'accept-ranges': 'bytes', 'access-control-allow-origin': '*'
+  }
   if (m) headers['content-range'] = `bytes ${start}-${end}/${size}`
   return new Response(body, { status: m ? 206 : 200, headers })
 }
@@ -88,6 +93,8 @@ async function readProject(id: string): Promise<Project> {
 }
 
 async function probe(projectId: string, path: string): Promise<MediaAsset> {
+  // ffprobe "reads" almost anything (a .txt is a video via its tty demuxer); only accept what preview can serve.
+  if (!MIME[extname(path).toLowerCase()]) throw new Error('this file type is not supported.')
   const { stdout } = await run(FFPROBE, ['-v', 'error', '-print_format', 'json', '-show_streams', '-show_format', path]).catch(() => {
     throw new Error('not a video, audio or image file this app can read.')
   })
