@@ -35,3 +35,8 @@ Stickers effects filters templates library,assets,could,yes,skip,licensed/owned 
 Cloud space and team collaboration,cloud,could,yes,skip,single-user own-business tool
 Publish directly to TikTok/YouTube,sharing,could,yes,skip,partner integrations; export a file and upload manually
 Account login and Pro subscription,account,could,yes,skip,own-business tool; no accounts
+Every feature free - no Pro tier watermark or export lock,pricing,must,no,yes,fix 1 from fixes.md
+Local project files with autosave and .bak recovery,editor,should,no,yes,fix 2
+No account network ads or notifications,editor,should,no,yes,fix 3
+Chroma key (green screen),properties,should,no,no,fix 4 - 8 App Store reviews
+Proxy previews for 4K/HEVC,player,could,no,no,fix 5
