@@ -42,11 +42,16 @@
     "@types/react": "^18.3.12",
     "@types/react-dom": "^18.3.1",
     "@vitejs/plugin-react": "^4.3.3",
-    "electron": "^33.2.0",
+    "electron": "^45.4.1",
     "electron-builder": "^25.1.8",
     "electron-vite": "^2.3.0",
     "typescript": "^5.6.3",
     "vite": "^5.4.11",
     "vitest": "^2.1.5"
+  },
+  "allowScripts": {
+    "esbuild@0.21.5": true,
+    "ffmpeg-static@5.2.0": true,
+    "electron@45.4.1": true
   }
 }
