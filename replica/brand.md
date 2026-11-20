@@ -88,3 +88,12 @@ Contrast: 18 pairs, 0 AA failures (`contrast.py replica/design/tokens.json`).
 
 `sweep.py . --config replica/brand.json` → clean (2026-11-19).
 Note: the project folder itself is still called `capcut-clone`. Rename it to `reelwright` when no editor or terminal has it open.
+
+## Web (2026-11-19)
+
+- Same name, palette and voice as desktop.
+- Page title "Reelwright"; meta description "Reelwright: a plain video editor in your browser. Your files stay on your computer."
+- Favicon `src/web/public/favicon.svg`: an amber carpenter's square on #111214, a stand-in from the logo brief until a real logo is made.
+- Web strings added: the storage note on Home and the narrow-window notice (both in the voice: plain, exact).
+- Sweep: clean.
+- Domain: if published, the domain checks in the name table still apply (.com/.app registered by someone; .io had no DNS).
