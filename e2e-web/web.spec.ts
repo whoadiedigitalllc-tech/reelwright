@@ -40,6 +40,7 @@ test.afterEach(() => expect(errors).toEqual([]))
 
 test('F01 import, edit, chroma key, export as a download', async () => {
   await expect(page.getByText('No projects yet')).toBeVisible()
+  await expect(page.getByText(/saved in this browser/)).toBeVisible()
   await a11y('S01 empty')
   await page.getByRole('button', { name: 'New project' }).first().click()
 

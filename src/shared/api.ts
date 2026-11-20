@@ -18,4 +18,5 @@ export interface Api {
   onExportProgress(cb: (pct: number) => void): () => void
   reveal?(path: string): Promise<void> // desktop only
   mediaUrl?(path: string): string // web: storage key -> object URL; desktop uses media://
+  storageNote?: string // shown on Home when where projects live isn't obvious (web)
 }

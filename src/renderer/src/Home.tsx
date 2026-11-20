@@ -65,6 +65,7 @@ export function Home() {
           <Plus size={16} aria-hidden /> New project
         </Button>
       </header>
+      {api.storageNote && <p className="muted storage-note">{api.storageNote}</p>}
 
       {list && list.length === 0 && (
         <div className="empty-state">

@@ -260,5 +260,7 @@ export const webApi: Api = {
     progressListeners.add(cb)
     return () => void progressListeners.delete(cb)
   },
-  mediaUrl: (path) => (path.startsWith('data:') ? path : urls.get(path) ?? '')
+  mediaUrl: (path) => (path.startsWith('data:') ? path : urls.get(path) ?? ''),
+  storageNote:
+    'Projects and media are saved in this browser on this computer. Nothing is uploaded. Clearing this site’s data deletes them, so keep your original files.'
 }
