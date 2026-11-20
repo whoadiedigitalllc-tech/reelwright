@@ -4,3 +4,4 @@ dist/
 replica/screens/
 test-results/
 *.log
+dist-web/

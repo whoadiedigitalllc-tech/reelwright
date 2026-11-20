@@ -498,7 +498,7 @@ function ExportDialog({ onClose }: { onClose: () => void }) {
         <>
           <p>Saved to <code>{result}</code></p>
           <div className="modal-actions">
-            <Button onClick={() => api.reveal(result)}>Show in folder</Button>
+            {api.reveal && <Button onClick={() => api.reveal!(result)}>Show in folder</Button>}
             <Button variant="primary" onClick={() => dlg.current?.close()}>Done</Button>
           </div>
         </>

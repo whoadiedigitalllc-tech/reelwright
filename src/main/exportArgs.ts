@@ -9,6 +9,8 @@ export interface ExportOptions {
   fps: number
   tmpDir: string // text files for drawtext go here
   fontDir: string
+  // Web: text clips pre-rendered as full-canvas transparent PNGs (clip id -> path) instead of drawtext + system fonts.
+  textImages?: Map<string, string>
 }
 
 // Numbers come from a JSON file on disk: never let NaN or a string reach the filter graph.
@@ -42,6 +44,20 @@ export function buildExportArgs(p: Project, o: ExportOptions) {
 
       if (c.type === 'text') {
         if (track.hidden || !c.text.trim()) continue
+        const png = o.textImages?.get(c.id)
+        if (png) {
+          const i = input++
+          inputs.push('-loop', '1', '-framerate', String(o.fps), '-t', String(dur), '-i', png)
+          const f = ['format=rgba']
+          if (n(t.opacity) < 1) f.push(`colorchannelmixer=aa=${n(t.opacity)}`)
+          if (fadeIn) f.push(`fade=t=in:st=0:d=${fadeIn}:alpha=1`)
+          if (fadeOut) f.push(`fade=t=out:st=${n(dur - fadeOut)}:d=${fadeOut}:alpha=1`)
+          f.push(`setpts=PTS+${start}/TB`)
+          graph.push(`[${i}:v]${f.join(',')}[c${k}]`)
+          graph.push(`[${last}][c${k}]overlay=0:0:eof_action=pass:${enable}[v${++k}]`)
+          last = `v${k}`
+          continue
+        }
         const file = `${o.tmpDir.replace(/\\/g, '/')}/text${k}.txt`
         textFiles.push({ path: file, text: c.text })
         const font = `${o.fontDir}/${FONTS[c.font] ?? FONTS.Arial}`

@@ -1,6 +1,7 @@
 import { useEffect, useRef } from 'react'
 import { Pause, Play } from 'lucide-react'
-import type { ChromaKey, Clip, Transform } from '../../shared/schema'
+import type { ChromaKey, Transform } from '../../shared/schema'
+import { drawText } from './drawText'
 import { ASPECTS, clipEnd, fadeFactor, hexRgb, keyAlpha, projectDuration, timecode } from '../../shared/ops'
 import { mediaUrl, useEditor } from './store'
 import { Button } from './ui'
@@ -68,19 +69,6 @@ export function Player() {
         o.putImageData(img, 0, 0)
         return off
       }
-      const drawText =(c: Extract<Clip, { type: 'text' }>, alpha: number) => {
-        const size = c.size * c.transform.scale
-        const lines = c.text.split('\n')
-        ctx.save()
-        ctx.globalAlpha = c.transform.opacity * alpha
-        ctx.font = `${size}px "${c.font}"`
-        ctx.fillStyle = c.color
-        ctx.textAlign = 'center'
-        ctx.textBaseline = 'middle'
-        const lh = size * 1.2
-        lines.forEach((line, i) => ctx.fillText(line, W / 2 + c.transform.x, H / 2 + c.transform.y + (i - (lines.length - 1) / 2) * lh))
-        ctx.restore()
-      }
 
       const active = new Set<string>()
       const alive = new Set<string>()
@@ -91,7 +79,7 @@ export function Player() {
           const local = t - c.start
           const fade = fadeFactor(c, local)
           if (c.type === 'text') {
-            if (!track.hidden) drawText(c, fade)
+            if (!track.hidden) drawText(ctx, c, W, H, c.transform.opacity * fade)
             continue
           }
           const a = p.assets.find((x) => x.id === c.assetId)

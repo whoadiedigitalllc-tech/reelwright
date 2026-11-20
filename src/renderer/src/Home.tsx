@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { Film, MoreHorizontal, Plus } from 'lucide-react'
 import { newProject, timecode } from '../../shared/ops'
-import type { ProjectSummary } from '../../preload'
+import type { ProjectSummary } from '../../shared/api'
 import { api, errMsg, mediaUrl, useEditor } from './store'
 import { Button } from './ui'
 

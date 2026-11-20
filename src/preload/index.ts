@@ -1,28 +1,24 @@
 import { contextBridge, ipcRenderer, webUtils } from 'electron'
-import type { MediaAsset, Project } from '../shared/schema'
+import type { Api } from '../shared/api'
 
-export interface ProjectSummary { id: string; name: string; updatedAt: string; duration: number; thumb?: string }
-
-const api = {
-  listProjects: (): Promise<ProjectSummary[]> => ipcRenderer.invoke('projects:list'),
-  createProject: (p: Project): Promise<Project> => ipcRenderer.invoke('projects:create', p),
-  loadProject: (id: string): Promise<Project> => ipcRenderer.invoke('projects:load', id),
-  saveProject: (p: Project): Promise<void> => ipcRenderer.invoke('projects:save', p),
-  renameProject: (id: string, name: string): Promise<void> => ipcRenderer.invoke('projects:rename', id, name),
-  deleteProject: (id: string): Promise<void> => ipcRenderer.invoke('projects:delete', id),
-  pickMedia: (): Promise<string[]> => ipcRenderer.invoke('media:pick'),
-  probe: (projectId: string, path: string): Promise<MediaAsset> => ipcRenderer.invoke('media:probe', projectId, path),
-  pathForFile: (f: File) => webUtils.getPathForFile(f),
-  exportVideo: (p: Project, o: { short: number; fps: number }): Promise<{ path?: string; canceled?: boolean }> =>
-    ipcRenderer.invoke('export:start', p, o),
-  cancelExport: (): Promise<void> => ipcRenderer.invoke('export:cancel'),
-  onExportProgress: (cb: (pct: number) => void) => {
+const api: Api = {
+  listProjects: () => ipcRenderer.invoke('projects:list'),
+  createProject: (p) => ipcRenderer.invoke('projects:create', p),
+  loadProject: (id) => ipcRenderer.invoke('projects:load', id),
+  saveProject: (p) => ipcRenderer.invoke('projects:save', p),
+  renameProject: (id, name) => ipcRenderer.invoke('projects:rename', id, name),
+  deleteProject: (id) => ipcRenderer.invoke('projects:delete', id),
+  pickMedia: () => ipcRenderer.invoke('media:pick'),
+  probe: (projectId, path) => ipcRenderer.invoke('media:probe', projectId, path),
+  pathForFile: (f) => webUtils.getPathForFile(f),
+  exportVideo: (p, o) => ipcRenderer.invoke('export:start', p, o),
+  cancelExport: () => ipcRenderer.invoke('export:cancel'),
+  onExportProgress: (cb) => {
     const h = (_e: unknown, pct: number) => cb(pct)
     ipcRenderer.on('export:progress', h)
     return () => void ipcRenderer.removeListener('export:progress', h)
   },
-  reveal: (path: string): Promise<void> => ipcRenderer.invoke('shell:reveal', path)
+  reveal: (path) => ipcRenderer.invoke('shell:reveal', path)
 }
 
 contextBridge.exposeInMainWorld('api', api)
-export type Api = typeof api

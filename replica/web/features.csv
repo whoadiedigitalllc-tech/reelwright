@@ -1,0 +1,48 @@
+feature,area,priority,original,clone,notes
+Create a new project from home,home,must,yes,no,
+List recent projects with thumbnail and date,home,must,yes,no,
+Reopen a saved project,home,must,yes,no,
+Rename and delete a project,home,should,yes,no,
+Import video audio and image files (picker + drag-drop),media,must,yes,no,
+Media bin with thumbnails and durations,media,must,yes,no,
+Drag media onto the timeline,timeline,must,yes,no,
+Multi-track timeline (main video + overlay + audio + text),timeline,must,yes,no,
+Playhead scrub and play/pause preview,player,must,yes,no,
+Split clip at playhead,timeline,must,yes,no,
+Trim clip by dragging edges,timeline,must,yes,no,
+Delete clip (and ripple on main track),timeline,must,yes,no,
+Reorder clips by drag,timeline,must,yes,no,
+Undo / redo,editor,must,yes,no,
+Autosave project to disk,editor,must,yes,no,
+Add text overlay with font size color position,text,must,yes,no,
+Export MP4 with resolution and fps choice,export,must,yes,no,
+Export progress and done/error states,export,must,yes,no,
+Timeline zoom and snapping,timeline,should,yes,no,
+Clip volume and mute,audio,should,yes,no,
+Clip speed (0.5x-4x constant),properties,should,yes,no,
+Basic transitions (crossfade dissolve slide),transitions,should,yes,no,fade in/out and dip-to-black only; no crossfade/slide
+Canvas aspect ratio (16:9 9:16 1:1),player,should,yes,no,
+Transform: scale position rotate opacity,properties,should,yes,no,text clips have no rotation
+Keyboard shortcuts (space S delete ctrl+z),editor,should,yes,no,
+Fade in/out audio,audio,could,yes,no,per-clip fades apply to sound too
+Color adjust (brightness contrast saturation),properties,could,yes,no,
+Crop clip,properties,could,yes,no,
+Freeze frame,timeline,could,yes,no,
+Auto captions (speech-to-text),ai,could,yes,no,needs local STT engine (whisper.cpp) - later
+Background removal,ai,could,yes,skip,heavy ML model; not core
+Music and sound effects library,assets,could,yes,skip,licensed catalogue owned by CapCut
+Stickers effects filters templates library,assets,could,yes,skip,licensed/owned content
+Cloud space and team collaboration,cloud,could,yes,skip,single-user own-business tool
+Publish directly to TikTok/YouTube,sharing,could,yes,skip,partner integrations; export a file and upload manually
+Account login and Pro subscription,account,could,yes,skip,own-business tool; no accounts
+Every feature free - no Pro tier watermark or export lock,pricing,must,no,no,fix 1 from fixes.md
+Local project files with autosave and .bak recovery,editor,should,no,no,fix 2
+No account network ads or notifications,editor,should,no,no,fix 3
+Chroma key (green screen),properties,should,no,no,fix 4 - 8 App Store reviews; colorkey in export; same formula in preview (keyed at max 640px wide)
+Proxy previews for 4K/HEVC,player,could,no,no,fix 5
+Works in a desktop browser with nothing to install,web,must,yes,no,
+Upload media from computer (picker + drag-drop) into the project,web,must,yes,no,original uploads to its cloud; clone keeps files in the browser
+Projects persist across reloads and browser restarts,web,must,yes,no,
+Export renders in the browser and downloads an MP4,web,must,yes,no,original renders on its servers (guess)
+Unsupported screen width shows a clear message,web,should,yes,no,editor is desktop-only on the original too (memory)
+Sign in / cloud space / sync between devices,web,could,yes,skip,single-user own-business tool; would need a backend

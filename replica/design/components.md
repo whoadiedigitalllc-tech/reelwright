@@ -75,3 +75,15 @@ Empty states (copy written fresh):
 - S03: "Drop video, audio or images here, or click Import."
 - S08: "Drag clips from Media to start your timeline."
 - S07: "Select a clip to edit it."
+
+## Web additions
+
+```
+NarrowNotice (S11)
+  shows     below 1000px window width, covering the app
+  content   icon, "Reelwright needs a wider window", "Make this window at least 1000px wide, or open it on a computer."
+  tokens    bg bg, text text / text-muted, centred, space 6
+  a11y      role=alert so it is announced; the app underneath is inert (aria-hidden) while it shows
+  used on   all screens (web only; the desktop window can't get that narrow)
+```
+Download is the browser's own UI; no component needed.

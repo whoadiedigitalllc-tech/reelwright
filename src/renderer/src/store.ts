@@ -4,7 +4,7 @@ import type { Id, Project } from '../../shared/schema'
 import { locate, projectDuration, remove, split } from '../../shared/ops'
 
 export const api = window.api
-export const mediaUrl = (path: string) => `media://local/${encodeURIComponent(path)}`
+export const mediaUrl = (path: string) => api.mediaUrl?.(path) ?? `media://local/${encodeURIComponent(path)}`
 export const ASSET_MIME = 'application/x-asset-id'
 // ipcRenderer.invoke wraps errors as "Error invoking remote method 'x': Error: <message>"
 export const errMsg = (e: unknown) => String((e as Error)?.message ?? e).replace(/^Error invoking remote method '[^']+': (Error: )?/, '')

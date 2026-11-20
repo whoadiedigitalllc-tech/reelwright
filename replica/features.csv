@@ -38,5 +38,5 @@ Account login and Pro subscription,account,could,yes,skip,own-business tool; no 
 Every feature free - no Pro tier watermark or export lock,pricing,must,no,yes,fix 1 from fixes.md
 Local project files with autosave and .bak recovery,editor,should,no,yes,fix 2
 No account network ads or notifications,editor,should,no,yes,fix 3
-Chroma key (green screen),properties,should,no,yes,fix 4 - 8 App Store reviews; colorkey in export, same formula in preview (keyed at max 640px wide)
+Chroma key (green screen),properties,should,no,yes,fix 4 - 8 App Store reviews; colorkey in export; same formula in preview (keyed at max 640px wide)
 Proxy previews for 4K/HEVC,player,could,no,no,fix 5
