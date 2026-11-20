@@ -39,7 +39,9 @@ async function a11y(name: string) {
 test.beforeAll(async () => {
   execFileSync(FF, ['-v', 'error', '-f', 'lavfi', '-i', 'testsrc2=s=640x360:r=30:d=4', '-f', 'lavfi', '-i', 'sine=d=4', '-shortest', '-pix_fmt', 'yuv420p', clip])
   execFileSync(FF, ['-v', 'error', '-f', 'lavfi', '-i', 'testsrc=s=300x300', '-frames:v', '1', png])
-  app = await electron.launch({ args: ['.'], env: { ...process.env, VE_USER_DATA: join(dir, 'data') } })
+  const env = { ...process.env, VE_USER_DATA: join(dir, 'data') }
+  // E2E_EXE=dist/win-unpacked/Reelwright.exe tests the packaged app (asar-unpacked ffmpeg paths)
+  app = await electron.launch(process.env.E2E_EXE ? { executablePath: process.env.E2E_EXE, env } : { args: ['.'], env })
   page = await app.firstWindow()
   page.on('console', (m) => m.type() === 'error' && errors.push(m.text()))
   page.on('pageerror', (e) => errors.push(e.message))

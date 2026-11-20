@@ -25,7 +25,8 @@
       "node_modules/ffprobe-static/**"
     ],
     "win": {
-      "target": "nsis"
+      "target": "nsis",
+      "signAndEditExecutable": false
     }
   },
   "dependencies": {
