@@ -103,6 +103,17 @@ test('F01 make a short video from scratch, F03 split/delete/undo', async () => {
   await a11y('S02 filled + S07 text')
   await page.screenshot({ path: 'replica/clone-screens/S07.png' })
 
+  // Chroma key on the image clip; park the playhead on it so the keyed preview path runs (fails on console errors)
+  await page.getByRole('button', { name: /^logo\.png, / }).click()
+  await page.getByLabel('Remove a background colour').check()
+  await expect(page.getByRole('slider', { name: 'Strength' })).toBeVisible()
+  await page.getByRole('spinbutton', { name: 'Strength' }).fill('40')
+  await page.locator('body').click({ position: { x: 5, y: 300 } })
+  for (let i = 0; i < 3; i++) await page.keyboard.press('Shift+ArrowRight') // 1s -> 4s, start of logo.png
+  await page.waitForTimeout(500)
+  await a11y('S07 chroma key')
+  await page.screenshot({ path: 'replica/clone-screens/S07-chroma.png' })
+
   // Export (F01 end)
   await page.getByRole('button', { name: 'Export' }).click()
   await a11y('S09 settings')

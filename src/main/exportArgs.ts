@@ -73,6 +73,9 @@ export function buildExportArgs(p: Project, o: ExportOptions) {
           `scale=w=${Math.round(W * n(t.scale))}:h=${Math.round(H * n(t.scale))}:force_original_aspect_ratio=decrease`,
           'format=rgba'
         ]
+        const ck = c.chromaKey
+        if (ck && /^#[0-9a-f]{6}$/i.test(ck.color))
+          f.push(`colorkey=color=0x${ck.color.slice(1)}:similarity=${Math.max(0.00001, n(ck.similarity))}:blend=${n(ck.blend)}`)
         if (t.rotation) {
           const rad = n((t.rotation * Math.PI) / 180)
           f.push(`rotate=${rad}:ow=rotw(${rad}):oh=roth(${rad}):c=none`)

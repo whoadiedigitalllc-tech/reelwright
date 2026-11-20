@@ -1,7 +1,7 @@
 import { useEffect, useRef } from 'react'
 import { Pause, Play } from 'lucide-react'
-import type { Clip, Transform } from '../../shared/schema'
-import { ASPECTS, clipEnd, fadeFactor, projectDuration, timecode } from '../../shared/ops'
+import type { ChromaKey, Clip, Transform } from '../../shared/schema'
+import { ASPECTS, clipEnd, fadeFactor, hexRgb, keyAlpha, projectDuration, timecode } from '../../shared/ops'
 import { mediaUrl, useEditor } from './store'
 import { Button } from './ui'
 
@@ -17,6 +17,7 @@ export function Player() {
   useEffect(() => {
     const videos = new Map<string, HTMLVideoElement>() // one element per clip
     const images = new Map<string, HTMLImageElement>() // per asset
+    const off = document.createElement('canvas') // scratch canvas for chroma keying
     let raf = 0
     let prev = performance.now()
 
@@ -51,7 +52,23 @@ export function Player() {
         ctx.drawImage(src, (-iw * k) / 2, (-ih * k) / 2, iw * k, ih * k)
         ctx.restore()
       }
-      const drawText = (c: Extract<Clip, { type: 'text' }>, alpha: number) => {
+      // shortcut: keys at max 640px wide on the CPU; move to a WebGL shader if keyed 1080p preview stutters
+      const keyed = (src: CanvasImageSource, iw: number, ih: number, ck: ChromaKey) => {
+        const s = Math.min(1, 640 / iw)
+        const w = Math.max(1, Math.round(iw * s))
+        const h = Math.max(1, Math.round(ih * s))
+        if (off.width !== w || off.height !== h) Object.assign(off, { width: w, height: h })
+        const o = off.getContext('2d', { willReadFrequently: true })!
+        o.clearRect(0, 0, w, h)
+        o.drawImage(src, 0, 0, w, h)
+        const img = o.getImageData(0, 0, w, h)
+        const d = img.data
+        const k = hexRgb(ck.color)
+        for (let i = 0; i < d.length; i += 4) d[i + 3] = Math.round(keyAlpha(d[i], d[i + 1], d[i + 2], k, ck.similarity, ck.blend) * 255)
+        o.putImageData(img, 0, 0)
+        return off
+      }
+      const drawText =(c: Extract<Clip, { type: 'text' }>, alpha: number) => {
         const size = c.size * c.transform.scale
         const lines = c.text.split('\n')
         ctx.save()
@@ -82,7 +99,10 @@ export function Player() {
           if (a.kind === 'image') {
             let img = images.get(a.id)
             if (!img) images.set(a.id, (img = Object.assign(new Image(), { crossOrigin: 'anonymous', src: mediaUrl(a.path) })))
-            if (img.complete && img.naturalWidth && !track.hidden) draw(img, img.naturalWidth, img.naturalHeight, c.transform, fade)
+            if (img.complete && img.naturalWidth && !track.hidden) {
+              const [iw, ih] = [img.naturalWidth, img.naturalHeight]
+              draw(c.chromaKey ? keyed(img, iw, ih, c.chromaKey) : img, iw, ih, c.transform, fade)
+            }
             continue
           }
           let v = videos.get(c.id)
@@ -106,7 +126,7 @@ export function Player() {
             if (!v.seeking && Math.abs(v.currentTime - src) > 0.5 / p.fps) v.currentTime = src
           }
           if (track.kind === 'video' && !track.hidden && a.kind === 'video' && v.readyState >= 2 && v.videoWidth)
-            draw(v, v.videoWidth, v.videoHeight, c.transform, fade)
+            draw(c.chromaKey ? keyed(v, v.videoWidth, v.videoHeight, c.chromaKey) : v, v.videoWidth, v.videoHeight, c.transform, fade)
         }
       }
       for (const [id, v] of videos) {

@@ -167,6 +167,14 @@ export function snapTime(t: number, candidates: number[], threshold: number) {
   return best
 }
 
+export const hexRgb = (hex: string) => [1, 3, 5].map((i) => parseInt(hex.slice(i, i + 2), 16))
+
+// Alpha 0..1 for one pixel. Same formula as ffmpeg's colorkey filter (export), so the preview matches the file.
+export function keyAlpha(r: number, g: number, b: number, [kr, kg, kb]: number[], similarity: number, blend: number) {
+  const diff = Math.sqrt(((r - kr) ** 2 + (g - kg) ** 2 + (b - kb) ** 2) / (3 * 255 * 255))
+  return blend > 0.0001 ? clamp((diff - similarity) / blend, 0, 1) : diff > similarity ? 1 : 0
+}
+
 // 0..1 multiplier for picture opacity and volume at `local` seconds into the clip.
 export function fadeFactor(c: Clip, local: number) {
   let f = 1

@@ -59,6 +59,13 @@ export interface MediaClip extends ClipBase {
   in: number // source seconds
   speed: number // 0.5..4
   volume: number // 0..2
+  chromaKey?: ChromaKey // video and image clips only
+}
+
+export interface ChromaKey {
+  color: string // #rrggbb, the background colour to remove
+  similarity: number // 0.01..1, how close a pixel must be to count as background
+  blend: number // 0..1, soft edge width
 }
 
 export interface TextClip extends ClipBase {

@@ -41,7 +41,7 @@ Counts below are keyword matches I checked by reading the hits; `feedback.md` ha
 | 1 | Every feature free; no Pro tier, watermark or export lock | S | - | **done** (by design) | paywall 47/2 sources; export lock 3; watermark 2 |
 | 2 | Work can't be lost: local project files, autosave, atomic write + .bak | S | - | **done** | lost work 2 (thin) |
 | 3 | No account, network, ads or notifications | S | - | **done** | AI/redesign 17 (thin); ads 9/2 sources |
-| 4 | Chroma key (ffmpeg `chromakey` in export; WebGL or pixel pass in preview) | M | /replica-build | not started | 8 reviews (thin) |
+| 4 | Chroma key (ffmpeg `colorkey` in export; same formula in preview, CPU pass) | M | /replica-build | **done** | 8 reviews (thin) |
 | 5 | Stay fast on big files: proxy previews for 4K/HEVC | M | /replica-build | not started | lag/crash 14; bugs 32/2 sources |
 | 6 | Keep the e2e suite green before every release | S | /replica-test | **done** (in place) | bugs 32/2 sources |
 

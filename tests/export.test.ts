@@ -62,4 +62,35 @@ describe('export', () => {
     const size = execFileSync(ffprobe.path, ['-v', 'error', '-select_streams', 'v', '-show_entries', 'stream=width,height', '-of', 'csv=p=0', out]).toString().trim()
     expect(size).toBe('360,640')
   }, 120_000)
+
+  it('chroma key removes the green layer so the red base shows through', () => {
+    const red = join(dir, 'red.png')
+    const green = join(dir, 'green.png')
+    execFileSync(FF, ['-v', 'error', '-f', 'lavfi', '-i', 'color=c=red:s=320x180', '-frames:v', '1', '-y', red])
+    execFileSync(FF, ['-v', 'error', '-f', 'lavfi', '-i', 'color=c=0x00ff00:s=320x180', '-frames:v', '1', '-y', green])
+    const render = (keyed: boolean) => {
+      const base = newProject('k')
+      base.assets = [
+        { id: 'r', path: red, kind: 'image', duration: 0, hasAudio: false },
+        { id: 'g', path: green, kind: 'image', duration: 0, hasAudio: false }
+      ]
+      const p = produce(base, (d) => {
+        place(d, mediaClip(d.assets[0]), Infinity, d.tracks[0].id)
+        const top = mediaClip(d.assets[1], 0)
+        if (keyed) top.chromaKey = { color: '#00ff00', similarity: 0.3, blend: 0.1 }
+        place(d, top, 0)
+      })
+      const out = join(dir, `key-${keyed}.mp4`)
+      const { args } = buildExportArgs(p, { out, short: 180, fps: 30, tmpDir: dir, fontDir: '' })
+      execFileSync(FF, args.filter((a) => a !== 'pipe:1' && a !== '-progress'), { stdio: 'pipe' })
+      // average colour of the first frame as 3 bytes
+      return [...execFileSync(FF, ['-v', 'error', '-i', out, '-frames:v', '1', '-vf', 'scale=1:1', '-f', 'rawvideo', '-pix_fmt', 'rgb24', '-'])]
+    }
+    const [r1, g1] = render(true)
+    expect(r1).toBeGreaterThan(200)
+    expect(g1).toBeLessThan(60)
+    const [r0, g0] = render(false)
+    expect(g0).toBeGreaterThan(200)
+    expect(r0).toBeLessThan(60)
+  }, 120_000)
 })

@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import { produce } from 'immer'
 import type { MediaAsset } from '../src/shared/schema'
-import { fadeFactor, mediaClip, moveMain, newProject, place, projectDuration, remove, setSpeed, split, textClip } from '../src/shared/ops'
+import { fadeFactor, hexRgb, keyAlpha, mediaClip, moveMain, newProject, place, projectDuration, remove, setSpeed, split, textClip } from '../src/shared/ops'
 
 const vid = (id: string, duration: number): MediaAsset => ({ id, path: `C:/${id}.mp4`, kind: 'video', duration, hasAudio: true })
 const aud: MediaAsset = { id: 'a', path: 'C:/a.mp3', kind: 'audio', duration: 10, hasAudio: true }
@@ -73,5 +73,18 @@ describe('timeline ops', () => {
     expect(fadeFactor(c, 0.5)).toBe(0.5)
     expect(fadeFactor(c, 2)).toBe(1)
     expect(fadeFactor(c, 3)).toBe(0.5)
+  })
+})
+
+describe('chroma key alpha (matches ffmpeg colorkey)', () => {
+  const g = hexRgb('#00ff00')
+  it('removes the key colour, keeps far colours, blends the edge', () => {
+    expect(g).toEqual([0, 255, 0])
+    expect(keyAlpha(0, 255, 0, g, 0.3, 0.1)).toBe(0)
+    expect(keyAlpha(255, 0, 0, g, 0.3, 0.1)).toBe(1)
+    const edge = keyAlpha(0, 255 - 155, 0, g, 0.3, 0.1) // diff ~0.358: inside the blend band
+    expect(edge).toBeGreaterThan(0)
+    expect(edge).toBeLessThan(1)
+    expect(keyAlpha(0, 200, 0, g, 0.3, 0)).toBe(0) // hard edge when blend is 0
   })
 })

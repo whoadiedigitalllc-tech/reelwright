@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
-import { ArrowLeft, Download, Film, Image as ImageIcon, Music, Plus, Sparkles, Type, Upload } from 'lucide-react'
-import type { Clip, MediaAsset, Project } from '../../shared/schema'
+import { ArrowLeft, Download, Film, Image as ImageIcon, Music, Pipette, Plus, Sparkles, Type, Upload } from 'lucide-react'
+import type { ChromaKey, Clip, MediaAsset, MediaClip, Project } from '../../shared/schema'
 import { FONTS, assetOf, locate, mediaClip, place, projectDuration, setSpeed, textClip, timecode } from '../../shared/ops'
 import { Player } from './Player'
 import { Timeline } from './Timeline'
@@ -356,12 +356,70 @@ function Inspector() {
           )}
         </fieldset>
       )}
+      {c.type === 'media' && a?.kind !== 'audio' && <ChromaKeyFields clip={c} />}
       <fieldset>
         <legend>Fades</legend>
         <NumberSlider label="Fade in" value={c.fadeIn} min={0} max={half} step={0.05} unit="s" onChange={(v) => upd('fi', (x) => void (x.fadeIn = v))} />
         <NumberSlider label="Fade out" value={c.fadeOut} min={0} max={half} step={0.05} unit="s" onChange={(v) => upd('fo', (x) => void (x.fadeOut = v))} />
       </fieldset>
     </aside>
+  )
+}
+
+function ChromaKeyFields({ clip: c }: { clip: MediaClip }) {
+  const commit = useEditor((s) => s.commit)
+  const toast = useEditor((s) => s.toast)
+  const upd = (key: string, fn: (ck: ChromaKey, x: MediaClip) => void) =>
+    commit((d) => {
+      const x = locate(d, c.id)!.clip as MediaClip
+      if (x.chromaKey) fn(x.chromaKey, x)
+    }, c.id + key)
+  const ck = c.chromaKey
+  const pick = async () => {
+    try {
+      // Chromium's built-in eyedropper: click anywhere on screen, e.g. the green in the preview
+      const r = await new (window as unknown as { EyeDropper: new () => { open: () => Promise<{ sRGBHex: string }> } }).EyeDropper().open()
+      upd('ckc', (k) => void (k.color = r.sRGBHex))
+    } catch (e) {
+      if ((e as Error).name !== 'AbortError') toast(`Couldn't pick a colour: ${(e as Error).message}`, 'error')
+    }
+  }
+  return (
+    <fieldset>
+      <legend>Chroma key</legend>
+      <label className="check">
+        <input
+          type="checkbox"
+          checked={!!ck}
+          onChange={(e) =>
+            commit((d) => {
+              const x = locate(d, c.id)!.clip as MediaClip
+              if (e.target.checked) x.chromaKey = { color: '#00ff00', similarity: 0.3, blend: 0.1 }
+              else delete x.chromaKey
+            })
+          }
+        />
+        Remove a background colour
+      </label>
+      {ck && (
+        <>
+          <Field label="Key colour">
+            {(id) => (
+              <div className="inline">
+                <input id={id} type="color" value={ck.color} onChange={(e) => upd('ckc', (k) => void (k.color = e.target.value))} />
+                {'EyeDropper' in window && (
+                  <Button onClick={pick}>
+                    <Pipette size={14} aria-hidden /> Pick from screen
+                  </Button>
+                )}
+              </div>
+            )}
+          </Field>
+          <NumberSlider label="Strength" value={ck.similarity} min={1} max={100} scale={100} unit="%" onChange={(v) => upd('cks', (k) => void (k.similarity = v))} />
+          <NumberSlider label="Softness" value={ck.blend} min={0} max={100} scale={100} unit="%" onChange={(v) => upd('ckb', (k) => void (k.blend = v))} />
+        </>
+      )}
+    </fieldset>
   )
 }
 
