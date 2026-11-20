@@ -165,6 +165,7 @@ export const webApi: Api = {
       input.click()
     }),
   pathForFile: register,
+  saveRecording: async (_projectId, wav, name) => register(new File([wav], name, { type: 'audio/wav' })), // probe() stores it
 
   probe: (projectId, key) =>
     exclusive(async () => {

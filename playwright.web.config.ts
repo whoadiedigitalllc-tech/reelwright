@@ -7,7 +7,8 @@ export default defineConfig({
   timeout: 300_000, // in-browser ffmpeg export is slow
   reporter: 'list',
   // WEB_URL=https://... tests a deployed site instead of the local build
-  use: { ...devices['Desktop Chrome'], baseURL: process.env.WEB_URL ?? 'http://localhost:4173', viewport: { width: 1440, height: 900 }, acceptDownloads: true },
+  use: { ...devices['Desktop Chrome'], baseURL: process.env.WEB_URL ?? 'http://localhost:4173', viewport: { width: 1440, height: 900 }, acceptDownloads: true,
+    permissions: ['microphone'], launchOptions: { args: ['--use-fake-device-for-media-stream', '--use-fake-ui-for-media-stream'] } }, // test tone instead of a real mic
   webServer: process.env.WEB_URL
     ? undefined
     : { command: 'npx vite preview --config vite.web.config.ts', url: 'http://localhost:4173', reuseExistingServer: false }

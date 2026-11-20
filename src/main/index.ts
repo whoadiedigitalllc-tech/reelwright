@@ -3,7 +3,7 @@ import { execFile, spawn, type ChildProcess } from 'node:child_process'
 import { createReadStream } from 'node:fs'
 import fs from 'node:fs/promises'
 import { tmpdir } from 'node:os'
-import { dirname, extname, join } from 'node:path'
+import { basename, dirname, extname, join } from 'node:path'
 import { Readable } from 'node:stream'
 import { promisify } from 'node:util'
 import ffmpegStatic from 'ffmpeg-static'
@@ -166,6 +166,15 @@ function registerIpc() {
     return r.canceled ? [] : r.filePaths
   })
   ipcMain.handle('media:probe', (_e, projectId: string, path: string) => probe(projectId, path))
+  // Mic recordings live in the project folder, so deleting the project deletes them too.
+  ipcMain.handle('media:saveRecording', async (_e, projectId: string, wav: ArrayBuffer, name: string) => {
+    const safe = basename(String(name)).replace(/[\\/:*?"<>|]/g, '_')
+    if (extname(safe).toLowerCase() !== '.wav') throw new Error('Recordings must be WAV.')
+    const out = join(dir(projectId), 'recordings', safe)
+    await fs.mkdir(dirname(out), { recursive: true })
+    await fs.writeFile(out, Buffer.from(wav), { flag: 'wx' }) // never overwrite an earlier take
+    return out
+  })
 
   ipcMain.handle('export:start', async (e, p: Project, o: { short: number; fps: number }) => {
     if (job) throw new Error('An export is already running.')

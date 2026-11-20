@@ -78,6 +78,7 @@ input[type=range] { accent-color: var(--c-accent); }
 .tab[aria-selected=true] { color: var(--c-accent); border-left-color: var(--c-accent); }
 .leftpanel { grid-area: left; overflow: auto; background: var(--c-surface); border-right: 1px solid var(--c-border); }
 .panel { padding: var(--sp-3); min-height: 100%; }
+.panel > .btn + .btn { margin-top: var(--sp-2); }
 .drop-over { outline: 2px dashed var(--c-accent); outline-offset: -6px; }
 
 .tiles { list-style: none; padding: 0; margin: var(--sp-3) 0 0; display: grid; grid-template-columns: 1fr 1fr; gap: var(--sp-2); }

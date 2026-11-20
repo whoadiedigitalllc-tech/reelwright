@@ -41,7 +41,8 @@ test.beforeAll(async () => {
   execFileSync(FF, ['-v', 'error', '-f', 'lavfi', '-i', 'testsrc=s=300x300', '-frames:v', '1', png])
   const env = { ...process.env, VE_USER_DATA: join(dir, 'data') }
   // E2E_EXE=dist/win-unpacked/Reelwright.exe tests the packaged app (asar-unpacked ffmpeg paths)
-  app = await electron.launch(process.env.E2E_EXE ? { executablePath: process.env.E2E_EXE, env } : { args: ['.'], env })
+  const mic = ['--use-fake-device-for-media-stream'] // Chromium's built-in test tone instead of a real microphone
+  app = await electron.launch(process.env.E2E_EXE ? { executablePath: process.env.E2E_EXE, args: mic, env } : { args: ['.', ...mic], env })
   page = await app.firstWindow()
   page.on('console', (m) => m.type() === 'error' && errors.push(m.text()))
   page.on('pageerror', (e) => errors.push(e.message))
@@ -160,4 +161,19 @@ test('F01-N1 export of an empty timeline is blocked; N2 unsupported file shows a
   await page.getByRole('button', { name: 'Import' }).click()
   await expect(page.getByRole('alert')).toContainText("Couldn't import notes.txt")
   await page.getByRole('button', { name: 'Dismiss' }).click()
+})
+
+test('F11 record voice from the microphone and add it to the timeline', async () => {
+  await page.getByRole('button', { name: 'Record voice' }).click()
+  const stop = page.getByRole('button', { name: /^Stop recording/ })
+  await expect(stop).toHaveText(/0:02/, { timeout: 10_000 })
+  await a11y('S02 recording')
+  await stop.click()
+  const tile = page.getByRole('button', { name: /Recording .*\.wav$/ }) // the media tile; the timeline clip's name goes on after ".wav, "
+  await expect(tile).toBeVisible({ timeout: 20_000 })
+  const path = (await tile.getAttribute('title'))!.split('\n')[0]
+  expect(path).toContain(join(dir, 'data', 'projects')) // saved inside the project folder
+  const len = parseFloat(execFileSync(ffprobe.path, ['-v', 'error', '-show_entries', 'format=duration', '-of', 'csv=p=0', path]).toString())
+  expect(len).toBeGreaterThan(1.5)
+  await expect(page.getByRole('button', { name: /^Recording .*\.wav, / })).toHaveCount(1) // placed at the playhead by itself
 })

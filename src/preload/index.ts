@@ -11,6 +11,7 @@ const api: Api = {
   pickMedia: () => ipcRenderer.invoke('media:pick'),
   probe: (projectId, path) => ipcRenderer.invoke('media:probe', projectId, path),
   pathForFile: (f) => webUtils.getPathForFile(f),
+  saveRecording: (projectId, wav, name) => ipcRenderer.invoke('media:saveRecording', projectId, wav, name),
   exportVideo: (p, o) => ipcRenderer.invoke('export:start', p, o),
   cancelExport: () => ipcRenderer.invoke('export:cancel'),
   onExportProgress: (cb) => {

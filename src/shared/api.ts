@@ -13,6 +13,7 @@ export interface Api {
   pickMedia(): Promise<string[]> // keys/paths to pass to probe()
   probe(projectId: string, path: string): Promise<MediaAsset>
   pathForFile(f: File): string
+  saveRecording(projectId: string, wav: ArrayBuffer, name: string): Promise<string> // returns a key/path to pass to probe()
   exportVideo(p: Project, o: { short: number; fps: number }): Promise<{ path?: string; canceled?: boolean }>
   cancelExport(): Promise<void>
   onExportProgress(cb: (pct: number) => void): () => void

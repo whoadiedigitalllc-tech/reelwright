@@ -1,11 +1,12 @@
 import { useEffect, useRef, useState } from 'react'
-import { ArrowLeft, Download, Film, Image as ImageIcon, Music, Pipette, Plus, Sparkles, Type, Upload } from 'lucide-react'
+import { ArrowLeft, Download, Film, Image as ImageIcon, Mic, Music, Pipette, Plus, Sparkles, Square, Type, Upload } from 'lucide-react'
 import type { ChromaKey, Clip, MediaAsset, MediaClip, Project } from '../../shared/schema'
 import { FONTS, assetOf, locate, mediaClip, place, projectDuration, setSpeed, textClip, timecode } from '../../shared/ops'
 import { Player } from './Player'
 import { Timeline } from './Timeline'
 import { ASSET_MIME, api, errMsg, mediaUrl, useEditor } from './store'
 import { Button, Field, NumberSlider } from './ui'
+import { recordingToWav } from './wav'
 
 // ---------- autosave: debounced, flushed before the window closes ----------
 let pending: Project | null = null
@@ -151,18 +152,21 @@ function MediaPanel() {
   const { commit, toast } = useEditor.getState()
 
   const importPaths = async (paths: string[]) => {
+    const added: MediaAsset[] = []
     for (const path of paths) {
       const name = path.split(/[\\/]/).pop()!
       setBusy((b) => [...b, name])
       try {
         const a = await api.probe(project.id, path)
         commit((d) => void d.assets.push(a))
+        added.push(a)
       } catch (e) {
         toast(`Couldn't import ${name}: ${errMsg(e)}`, 'error')
       } finally {
         setBusy((b) => b.filter((x) => x !== name))
       }
     }
+    return added
   }
 
   return (
@@ -183,8 +187,13 @@ function MediaPanel() {
       <Button variant="primary" className="wide" onClick={async () => importPaths(await api.pickMedia())}>
         <Upload size={16} aria-hidden /> Import
       </Button>
+      <RecordButton
+        onSaved={async (path, at) => {
+          for (const a of await importPaths([path])) commit((d) => place(d, mediaClip(a), at))
+        }}
+      />
       {project.assets.length === 0 && busy.length === 0 && (
-        <p className="empty-hint">Drop video, audio or images here, or click Import.</p>
+        <p className="empty-hint">Drop video, audio or images here, click Import, or record your voice.</p>
       )}
       <ul className="tiles">
         {project.assets.map((a) => (
@@ -214,6 +223,68 @@ function MediaPanel() {
         ))}
       </ul>
     </div>
+  )
+}
+
+function micError(e: unknown) {
+  const name = (e as Error)?.name
+  if (name === 'NotAllowedError') return 'Microphone access is blocked. Allow it in your browser or in Windows privacy settings, then try again.'
+  if (name === 'NotFoundError') return 'No microphone found. Plug one in and try again.'
+  return `Couldn't start recording: ${errMsg(e)}`
+}
+
+function RecordButton({ onSaved }: { onSaved: (path: string, at: number) => void }) {
+  const [rec, setRec] = useState<MediaRecorder | null>(null)
+  const [secs, setSecs] = useState(0)
+  const toast = useEditor((s) => s.toast)
+
+  useEffect(() => {
+    if (!rec) return
+    const t0 = Date.now()
+    const t = setInterval(() => setSecs(Math.floor((Date.now() - t0) / 1000)), 250)
+    return () => {
+      clearInterval(t)
+      if (rec.state !== 'inactive') rec.stop() // switching tabs ends the take but keeps it
+    }
+  }, [rec])
+
+  const start = async () => {
+    let stream: MediaStream
+    try {
+      stream = await navigator.mediaDevices.getUserMedia({ audio: true })
+    } catch (e) {
+      return toast(micError(e), 'error')
+    }
+    const { project, time: at } = useEditor.getState() // the take lands where the playhead was when it started
+    const projectId = project!.id
+    const r = new MediaRecorder(stream)
+    const chunks: Blob[] = []
+    r.ondataavailable = (e) => chunks.push(e.data)
+    r.onstop = async () => {
+      stream.getTracks().forEach((t) => t.stop())
+      setRec(null)
+      try {
+        const wav = await recordingToWav(new Blob(chunks, { type: r.mimeType }))
+        if (useEditor.getState().project?.id !== projectId) return // left the editor mid-take
+        const name = `Recording ${new Date().toLocaleString('sv-SE').replace(/:/g, '-')}.wav` // sv-SE = 2026-11-20 14:05:09
+        onSaved(await api.saveRecording(projectId, wav, name), at)
+      } catch (e) {
+        toast(`Couldn't save the recording: ${errMsg(e)}`, 'error')
+      }
+    }
+    r.start()
+    setSecs(0)
+    setRec(r)
+  }
+
+  return rec ? (
+    <Button variant="danger" className="wide" onClick={() => rec.stop()}>
+      <Square size={14} aria-hidden /> Stop recording {Math.floor(secs / 60)}:{String(secs % 60).padStart(2, '0')}
+    </Button>
+  ) : (
+    <Button className="wide" onClick={start}>
+      <Mic size={16} aria-hidden /> Record voice
+    </Button>
   )
 }
 

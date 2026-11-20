@@ -116,6 +116,18 @@ test('F01-N2 unsupported file shows an error', async () => {
   await page.getByRole('button', { name: 'Import' }).click()
   await (await chooser).setFiles([{ name: 'notes.txt', mimeType: 'text/plain', buffer: Buffer.from('hi') }])
   await expect(page.getByRole('alert')).toContainText("Couldn't import notes.txt")
+  await page.getByRole('button', { name: 'Dismiss' }).click()
+})
+
+test('F11 record voice from the microphone and add it to the timeline', async () => {
+  await page.getByRole('button', { name: 'Record voice' }).click()
+  const stop = page.getByRole('button', { name: /^Stop recording/ })
+  await expect(stop).toHaveText(/0:02/, { timeout: 10_000 })
+  await stop.click()
+  const tile = page.getByRole('button', { name: /Recording .*\.wav$/ }) // the media tile; the timeline clip's name goes on after ".wav, "
+  await expect(tile).toBeVisible({ timeout: 60_000 })
+  await expect(tile.getByText(/^00:0[23]$/)).toBeVisible() // duration read from the WAV
+  await expect(page.getByRole('button', { name: /^Recording .*\.wav, / })).toHaveCount(1) // placed at the playhead by itself
 })
 
 test('S11 narrow window shows a notice', async () => {
