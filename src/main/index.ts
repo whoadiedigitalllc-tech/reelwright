@@ -218,7 +218,8 @@ function createWindow() {
     height: 900,
     minWidth: 1100,
     minHeight: 700,
-    backgroundColor: '#111214',
+    backgroundColor: '#111214', // = --c-bg, shown before the page paints
+    title: 'Reelwright',
     autoHideMenuBar: true,
     webPreferences: { preload: join(__dirname, '../preload/index.js'), contextIsolation: true, nodeIntegration: false, sandbox: true }
   })

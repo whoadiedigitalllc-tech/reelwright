@@ -1,9 +1,9 @@
 {
-  "name": "video-editor",
-  "productName": "Video Editor",
+  "name": "reelwright",
+  "productName": "Reelwright",
   "version": "0.1.0",
   "private": true,
-  "description": "Desktop video editor: import clips, cut on a timeline, add text, export MP4.",
+  "description": "Reelwright: a plain, offline desktop video editor. Every feature free.",
   "main": "out/main/index.js",
   "scripts": {
     "dev": "electron-vite dev",
@@ -15,8 +15,8 @@
     "dist": "electron-vite build && electron-builder --win"
   },
   "build": {
-    "appId": "local.videoeditor.app",
-    "productName": "Video Editor",
+    "appId": "app.reelwright.desktop",
+    "productName": "Reelwright",
     "files": [
       "out/**"
     ],

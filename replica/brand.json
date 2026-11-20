@@ -1,0 +1,14 @@
+{
+ "name": "Reelwright",
+ "avoid": [
+  "CapCut",
+  "Cap Cut",
+  "ByteDance",
+  "Jianying"
+ ],
+ "domains": [
+  "capcut.com",
+  "capcut.net"
+ ],
+ "colors": []
+}
