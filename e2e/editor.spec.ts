@@ -1,6 +1,8 @@
 // End-to-end: drives the built app (npm run build first). OS file dialogs are stubbed in the main process.
 import { _electron as electron, expect, test, type ElectronApplication, type Page } from '@playwright/test'
 import { execFileSync } from 'node:child_process'
+import { createServer } from 'node:http'
+import type { AddressInfo } from 'node:net'
 import { existsSync, mkdtempSync, readFileSync, rmSync } from 'node:fs'
 import { createRequire } from 'node:module'
 import { tmpdir } from 'node:os'
@@ -13,6 +15,31 @@ const dir = mkdtempSync(join(tmpdir(), 've-e2e-'))
 const clip = join(dir, 'beach clip.mp4')
 const png = join(dir, 'logo.png')
 const out = join(dir, 'final.mp4')
+
+const speech = join(dir, 'speech.mp3')
+
+// Fake ElevenLabs: just enough of the API for the voice flow, so tests spend no credits.
+const got = { clone: '', tts: [] as unknown[] }
+const voices: { voice_id: string; name: string }[] = []
+const fake = createServer(async (req, res) => {
+  let body = ''
+  for await (const c of req) body += c.toString('latin1')
+  const json = (code: number, v: unknown) => res.writeHead(code, { 'content-type': 'application/json' }).end(JSON.stringify(v))
+  if (req.headers['xi-api-key'] !== 'test-key') return json(401, { detail: { status: 'invalid_api_key', message: 'Invalid API key' } })
+  const url = new URL(req.url!, 'http://x')
+  if (url.pathname === '/v1/user') return json(200, { subscription: { tier: 'starter', can_use_instant_voice_cloning: true } })
+  if (url.pathname === '/v2/voices') return json(200, { voices, has_more: false, total_count: voices.length })
+  if (url.pathname === '/v1/voices/add') {
+    got.clone = body
+    voices.push({ voice_id: 'v1', name: 'My voice' })
+    return json(200, { voice_id: 'v1', requires_verification: false })
+  }
+  if (url.pathname === '/v1/text-to-speech/v1') {
+    got.tts.push(JSON.parse(body))
+    return res.writeHead(200, { 'content-type': 'audio/mpeg' }).end(readFileSync(speech))
+  }
+  json(404, { detail: 'Not found' })
+})
 
 let app: ElectronApplication
 let page: Page
@@ -39,7 +66,9 @@ async function a11y(name: string) {
 test.beforeAll(async () => {
   execFileSync(FF, ['-v', 'error', '-f', 'lavfi', '-i', 'testsrc2=s=640x360:r=30:d=4', '-f', 'lavfi', '-i', 'sine=d=4', '-shortest', '-pix_fmt', 'yuv420p', clip])
   execFileSync(FF, ['-v', 'error', '-f', 'lavfi', '-i', 'testsrc=s=300x300', '-frames:v', '1', png])
-  const env = { ...process.env, VE_USER_DATA: join(dir, 'data') }
+  execFileSync(FF, ['-v', 'error', '-f', 'lavfi', '-i', 'sine=f=300:d=2', speech])
+  await new Promise<void>((r) => fake.listen(0, '127.0.0.1', r))
+  const env = { ...process.env, VE_USER_DATA: join(dir, 'data'), VE_ELEVENLABS_URL: `http://127.0.0.1:${(fake.address() as AddressInfo).port}` }
   // E2E_EXE=dist/win-unpacked/Reelwright.exe tests the packaged app (asar-unpacked ffmpeg paths)
   const mic = ['--use-fake-device-for-media-stream'] // Chromium's built-in test tone instead of a real microphone
   app = await electron.launch(process.env.E2E_EXE ? { executablePath: process.env.E2E_EXE, args: mic, env } : { args: ['.', ...mic], env })
@@ -50,6 +79,7 @@ test.beforeAll(async () => {
 
 test.afterAll(async () => {
   await app?.close()
+  fake.close()
   rmSync(dir, { recursive: true, force: true })
 })
 
@@ -176,4 +206,40 @@ test('F11 record voice from the microphone and add it to the timeline', async ()
   const len = parseFloat(execFileSync(ffprobe.path, ['-v', 'error', '-show_entries', 'format=duration', '-of', 'csv=p=0', path]).toString())
   expect(len).toBeGreaterThan(1.5)
   await expect(page.getByRole('button', { name: /^Recording .*\.wav, / })).toHaveCount(1) // placed at the playhead by itself
+})
+
+test('F12 clone a voice from the recording, then generate speech at the playhead (fake ElevenLabs)', async () => {
+  await page.getByRole('tab', { name: 'Voice' }).click()
+  await page.getByLabel('ElevenLabs API key').fill('wrong-key')
+  await page.getByRole('button', { name: 'Save key' }).click()
+  await expect(page.getByRole('alert')).toContainText('ElevenLabs rejected the API key.')
+  await page.getByRole('button', { name: 'Dismiss' }).click()
+  await page.getByLabel('ElevenLabs API key').fill('test-key')
+  await page.getByRole('button', { name: 'Save key' }).click()
+  await expect(page.getByText('No voices yet')).toBeVisible()
+  expect(readFileSync(join(dir, 'data', 'elevenlabs.key'))).not.toContain(Buffer.from('test-key')) // encrypted at rest
+
+  await page.getByLabel('Voice name').fill('My voice')
+  await page.getByLabel(/^Recording .*\.wav$/).check()
+  const create = page.getByRole('button', { name: 'Create voice' })
+  await expect(create).toBeDisabled() // consent not ticked yet
+  await page.getByLabel(/my voice, or I have the speaker/).check()
+  await create.click()
+  await expect(page.getByLabel('Voice', { exact: true })).toHaveValue('v1')
+  expect(got.clone).toContain('name="name"\r\n\r\nMy voice')
+  expect(got.clone).toMatch(/name="files"; filename="Recording .*\.wav"/)
+  await a11y('S12 voice')
+
+  await page.getByLabel('Text').fill('Hello from my voice')
+  await page.getByRole('button', { name: 'Generate at playhead' }).click()
+  await expect(page.getByRole('button', { name: /^Speech .*\.mp3, / })).toHaveCount(1)
+  expect(got.tts).toEqual([{ text: 'Hello from my voice', model_id: 'eleven_multilingual_v2' }])
+  await page.screenshot({ path: 'replica/clone-screens/S12-voice.png' })
+
+  // the key survives reopening the panel, and can be removed
+  await page.getByRole('tab', { name: 'Media' }).click()
+  await page.getByRole('tab', { name: 'Voice' }).click()
+  await expect(page.getByLabel('Voice', { exact: true })).toHaveValue('v1')
+  await page.getByRole('button', { name: 'Remove API key' }).click()
+  await expect(page.getByLabel('ElevenLabs API key')).toBeVisible()
 })

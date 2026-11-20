@@ -128,6 +128,7 @@ test('F11 record voice from the microphone and add it to the timeline', async ()
   await expect(tile).toBeVisible({ timeout: 60_000 })
   await expect(tile.getByText(/^00:0[23]$/)).toBeVisible() // duration read from the WAV
   await expect(page.getByRole('button', { name: /^Recording .*\.wav, / })).toHaveCount(1) // placed at the playhead by itself
+  await expect(page.getByRole('tab', { name: 'Voice' })).toHaveCount(0) // ElevenLabs is desktop only (API key stays out of the browser)
 })
 
 test('S11 narrow window shows a notice', async () => {

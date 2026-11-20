@@ -1,4 +1,4 @@
-import { app, BrowserWindow, dialog, ipcMain, protocol, shell } from 'electron'
+import { app, BrowserWindow, dialog, ipcMain, protocol, safeStorage, shell } from 'electron'
 import { execFile, spawn, type ChildProcess } from 'node:child_process'
 import { createReadStream } from 'node:fs'
 import fs from 'node:fs/promises'
@@ -11,6 +11,7 @@ import ffprobeStatic from 'ffprobe-static'
 import type { MediaAsset, Project } from '../shared/schema'
 import { projectDuration, uid } from '../shared/ops'
 import { buildExportArgs } from './exportArgs'
+import * as eleven from './elevenlabs'
 
 const run = promisify(execFile)
 // Binaries can't run from inside app.asar; electron-builder unpacks them (see asarUnpack in package.json).
@@ -219,6 +220,37 @@ function registerIpc() {
     job?.kill()
   })
   ipcMain.handle('shell:reveal', (_e, p: string) => shell.showItemInFolder(p))
+
+  // ---------- ElevenLabs: key encrypted with the OS (DPAPI on Windows), never sent to the renderer ----------
+  const keyFile = () => join(app.getPath('userData'), 'elevenlabs.key')
+  const readKey = () => fs.readFile(keyFile()).then((b) => safeStorage.decryptString(b), () => null)
+  const needKey = async () => (await readKey()) ?? Promise.reject(new Error('Add your ElevenLabs API key first.'))
+  ipcMain.handle('voice:status', async () => ({ hasKey: !!(await readKey()) }))
+  ipcMain.handle('voice:setKey', async (_e, key: string) => {
+    key = String(key).trim()
+    if (!safeStorage.isEncryptionAvailable()) throw new Error("This computer can't store the key securely.")
+    const acct = await eleven.account(key) // a bad key fails here and is never stored
+    await fs.writeFile(keyFile(), safeStorage.encryptString(key))
+    return acct
+  })
+  ipcMain.handle('voice:clearKey', () => fs.rm(keyFile(), { force: true }))
+  ipcMain.handle('voice:list', async () => eleven.listVoices(await needKey()))
+  ipcMain.handle('voice:clone', async (_e, name: string, paths: string[]) => {
+    const files = []
+    for (const p of paths) {
+      if (!MIME[extname(p).toLowerCase()]?.startsWith('audio/')) throw new Error(`${basename(p)} is not an audio file.`)
+      files.push({ name: basename(p), data: await fs.readFile(p) })
+    }
+    if (!files.length || !String(name).trim()) throw new Error('Give the voice a name and pick at least one sample.')
+    return eleven.cloneVoice(await needKey(), String(name).trim(), files)
+  })
+  ipcMain.handle('voice:speak', async (_e, projectId: string, voiceId: string, text: string) => {
+    const mp3 = await eleven.speak(await needKey(), voiceId, String(text))
+    const out = join(dir(projectId), 'voiceovers', `Speech ${new Date().toLocaleString('sv-SE').replace(/:/g, '-')}.mp3`)
+    await fs.mkdir(dirname(out), { recursive: true })
+    await fs.writeFile(out, mp3, { flag: 'wx' })
+    return out
+  })
 }
 
 function createWindow() {

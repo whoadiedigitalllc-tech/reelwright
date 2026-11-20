@@ -19,7 +19,15 @@ const api: Api = {
     ipcRenderer.on('export:progress', h)
     return () => void ipcRenderer.removeListener('export:progress', h)
   },
-  reveal: (path) => ipcRenderer.invoke('shell:reveal', path)
+  reveal: (path) => ipcRenderer.invoke('shell:reveal', path),
+  voice: {
+    status: () => ipcRenderer.invoke('voice:status'),
+    setKey: (key) => ipcRenderer.invoke('voice:setKey', key),
+    clearKey: () => ipcRenderer.invoke('voice:clearKey'),
+    list: () => ipcRenderer.invoke('voice:list'),
+    clone: (name, samplePaths) => ipcRenderer.invoke('voice:clone', name, samplePaths),
+    speak: (projectId, voiceId, text) => ipcRenderer.invoke('voice:speak', projectId, voiceId, text)
+  }
 }
 
 contextBridge.exposeInMainWorld('api', api)

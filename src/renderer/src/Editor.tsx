@@ -1,4 +1,5 @@
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useRef, useState, type FormEvent } from 'react'
+import type { Voice } from '../../shared/api'
 import { ArrowLeft, Download, Film, Image as ImageIcon, Mic, Music, Pipette, Plus, Sparkles, Square, Type, Upload } from 'lucide-react'
 import type { ChromaKey, Clip, MediaAsset, MediaClip, Project } from '../../shared/schema'
 import { FONTS, assetOf, locate, mediaClip, place, projectDuration, setSpeed, textClip, timecode } from '../../shared/ops'
@@ -77,13 +78,14 @@ function useShortcuts() {
 export function Editor() {
   useAutosave()
   useShortcuts()
-  const [tab, setTab] = useState<'media' | 'text' | 'fades'>('media')
+  const [tab, setTab] = useState<'media' | 'text' | 'fades' | 'voice'>('media')
   const [exporting, setExporting] = useState(false)
-  const tabs = [
+  const tabs = ([
     { id: 'media', label: 'Media', Icon: Film },
     { id: 'text', label: 'Text', Icon: Type },
-    { id: 'fades', label: 'Fades', Icon: Sparkles }
-  ] as const
+    { id: 'fades', label: 'Fades', Icon: Sparkles },
+    { id: 'voice', label: 'Voice', Icon: Mic }
+  ] as const).filter((t) => t.id !== 'voice' || api.voice)
   return (
     <main className="editor">
       <TopBar onExport={() => setExporting(true)} />
@@ -99,6 +101,7 @@ export function Editor() {
         {tab === 'media' && <MediaPanel />}
         {tab === 'text' && <TextPanel />}
         {tab === 'fades' && <FadesPanel />}
+        {tab === 'voice' && <VoicePanel />}
       </section>
       <Player />
       <Inspector />
@@ -358,6 +361,159 @@ function FadesPanel() {
           </li>
         ))}
       </ul>
+    </div>
+  )
+}
+
+// ---------- voice: ElevenLabs cloning + text to speech (desktop) ----------
+
+function KeyForm({ onSaved }: { onSaved: () => void }) {
+  const [key, setKey] = useState('')
+  const [busy, setBusy] = useState(false)
+  const toast = useEditor((s) => s.toast)
+  const save = async (e: FormEvent) => {
+    e.preventDefault()
+    setBusy(true)
+    try {
+      const a = await api.voice!.setKey(key)
+      if (!a.canClone) toast("Your ElevenLabs plan can't clone voices (Starter or above). Speech from voices you already have still works.")
+      onSaved()
+    } catch (err) {
+      toast(errMsg(err), 'error')
+    } finally {
+      setBusy(false)
+    }
+  }
+  return (
+    <form className="panel voice-panel" onSubmit={save}>
+      <h2>Voice</h2>
+      <p className="muted">
+        Clone your voice and turn text into speech with your own ElevenLabs account. Cloning needs their Starter plan or above. This is the
+        only Reelwright feature that goes online.
+      </p>
+      <Field label="ElevenLabs API key">
+        {(id) => <input id={id} type="password" autoComplete="off" spellCheck={false} value={key} onChange={(e) => setKey(e.target.value)} />}
+      </Field>
+      <p className="muted">Stored encrypted on this computer and sent only to ElevenLabs.</p>
+      <Button type="submit" variant="primary" className="wide" disabled={!key.trim() || busy}>
+        {busy ? 'Checking…' : 'Save key'}
+      </Button>
+    </form>
+  )
+}
+
+function VoicePanel() {
+  const v = api.voice!
+  const project = useEditor((s) => s.project)!
+  const toast = useEditor((s) => s.toast)
+  const [hasKey, setHasKey] = useState<boolean | null>(null)
+  const [voices, setVoices] = useState<Voice[]>([])
+  const [voiceId, setVoiceId] = useState('')
+  const [text, setText] = useState('')
+  const [name, setName] = useState('')
+  const [samples, setSamples] = useState<string[]>([])
+  const [consent, setConsent] = useState(false)
+  const [busy, setBusy] = useState('')
+
+  const run = async (what: string, fn: () => Promise<void>) => {
+    setBusy(what)
+    try {
+      await fn()
+    } catch (e) {
+      toast(errMsg(e), 'error')
+    } finally {
+      setBusy('')
+    }
+  }
+  const load = () =>
+    run('Loading your voices…', async () => {
+      const l = await v.list()
+      setVoices(l)
+      setVoiceId((id) => (l.some((x) => x.id === id) ? id : l[0]?.id ?? ''))
+    })
+  useEffect(() => {
+    v.status().then((s) => {
+      setHasKey(s.hasKey)
+      if (s.hasKey) load()
+    }, (e) => toast(errMsg(e), 'error'))
+  }, [])
+
+  if (hasKey === null) return <div className="panel" />
+  if (!hasKey) return <KeyForm onSaved={() => { setHasKey(true); load() }} />
+
+  const audio = project.assets.filter((a) => a.kind === 'audio' && !a.offline)
+  const speak = () =>
+    run('Generating speech…', async () => {
+      const at = useEditor.getState().time // lands where the playhead was when you clicked
+      const path = await v.speak(project.id, voiceId, text)
+      const a = await api.probe(project.id, path)
+      const { commit, project: now } = useEditor.getState()
+      if (now?.id !== project.id) return
+      commit((d) => void d.assets.push(a))
+      commit((d) => place(d, mediaClip(a), at))
+    })
+  const clone = () =>
+    run('Creating voice…', async () => {
+      const r = await v.clone(name, samples)
+      setVoices((l) => [...l, r].sort((a, b) => a.name.localeCompare(b.name)))
+      setVoiceId(r.id)
+      setName('')
+      setSamples([])
+      setConsent(false)
+      toast(r.requiresVerification ? `${r.name} needs verifying on the ElevenLabs website before you can use it.` : `Created ${r.name}.`)
+    })
+
+  return (
+    <div className="panel voice-panel" aria-busy={!!busy}>
+      <h2>Generate speech</h2>
+      {voices.length === 0 ? (
+        <p className="muted">No voices yet. Create one from a recording below.</p>
+      ) : (
+        <Field label="Voice">
+          {(id) => (
+            <select id={id} value={voiceId} onChange={(e) => setVoiceId(e.target.value)}>
+              {voices.map((x) => <option key={x.id} value={x.id}>{x.name}</option>)}
+            </select>
+          )}
+        </Field>
+      )}
+      <Field label="Text">
+        {(id) => <textarea id={id} rows={5} maxLength={10000} value={text} onChange={(e) => setText(e.target.value)} />}
+      </Field>
+      <p className="muted">{text.length} characters. ElevenLabs bills by the character.</p>
+      <Button variant="primary" className="wide" disabled={!!busy || !voiceId || !text.trim()} onClick={speak}>
+        Generate at playhead
+      </Button>
+
+      <h2>Create a voice</h2>
+      <p className="muted">Record or import one to two minutes of clear speech, then pick it here.</p>
+      <Field label="Voice name">{(id) => <input id={id} value={name} onChange={(e) => setName(e.target.value)} />}</Field>
+      <fieldset>
+        <legend>Samples</legend>
+        {audio.length === 0 && <p className="muted">No audio in this project yet.</p>}
+        {audio.map((a) => (
+          <label key={a.id} className="check">
+            <input
+              type="checkbox"
+              checked={samples.includes(a.path)}
+              onChange={(e) => setSamples((s) => (e.target.checked ? [...s, a.path] : s.filter((p) => p !== a.path)))}
+            />
+            {a.path.split(/[\\/]/).pop()}
+          </label>
+        ))}
+      </fieldset>
+      <label className="check">
+        <input type="checkbox" checked={consent} onChange={(e) => setConsent(e.target.checked)} />
+        This is my voice, or I have the speaker's permission to clone it.
+      </label>
+      <Button className="wide" disabled={!!busy || !name.trim() || !samples.length || !consent} onClick={clone}>
+        Create voice
+      </Button>
+
+      <p role="status" className="muted">{busy}</p>
+      <Button variant="ghost" className="wide" disabled={!!busy} onClick={() => run('', async () => { await v.clearKey(); setHasKey(false); setVoices([]) })}>
+        Remove API key
+      </Button>
     </div>
   )
 }
