@@ -33,7 +33,7 @@ test.beforeAll(async ({ browser }) => {
   page = await browser.newPage()
   page.on('console', (m) => m.type() === 'error' && errors.push(m.text()))
   page.on('pageerror', (e) => errors.push(e.message))
-  await page.goto('/')
+  await page.goto('./') // relative, so a sub-path deploy (GitHub Pages /reelwright/) works
 })
 test.afterAll(() => rmSync(dir, { recursive: true, force: true }))
 test.afterEach(() => expect(errors).toEqual([]))
